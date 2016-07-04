@@ -13,6 +13,7 @@ static const CGFloat LineNoneTitleHeight = 20.0;
 static const CGFloat ItemSize = 60.0;
 static const CGFloat ItemTitleHeight = 30.0;
 static const CGFloat CancelButtonHeight = 60.0;
+static const CGFloat ItemSpacing = 20.0;
 
 @interface ZJLActionSheet()
 @property (nonatomic, assign) CGRect sheetRect;
@@ -93,6 +94,77 @@ static const CGFloat CancelButtonHeight = 60.0;
     }
     _sheetHeight += CancelButtonHeight;
     self.frame = CGRectMake(0, _sheetRect.size.height, _sheetRect.size.width, _sheetHeight);
+}
+
+#pragma mark - init all subviews
+- (void)initAllSubviews
+{
+    CGFloat height = 0.0;
+    for (id item in _items) {
+        if ([item isKindOfClass:[NSString class]]) {
+            NSString *title = (NSString *)item;
+            if ([title isEqualToString:@""]) {
+                UIView *marginView = [[UIView alloc] initWithFrame:CGRectMake(0, height, _sheetRect.size.width, LineNoneTitleHeight)];
+                [self addSubview:marginView];
+                height += LineNoneTitleHeight;
+            }else{
+                UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, height, _sheetRect.size.width, LineTitleHeight)];
+                titleLabel.font = [UIFont systemFontOfSize:14.0];
+                titleLabel.text = title;
+                titleLabel.textAlignment = NSTextAlignmentCenter;
+                [self addSubview:titleLabel];
+                height += LineTitleHeight;
+            }
+        }else if ([item isKindOfClass:[NSArray class]]){
+            NSArray *list = (NSArray *)item;
+            UIScrollView *lineView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, height, _sheetRect.size.width, (ItemSize+ItemTitleHeight))];
+            lineView.directionalLockEnabled = YES;
+            lineView.showsVerticalScrollIndicator = NO;
+            lineView.showsHorizontalScrollIndicator = NO;
+            lineView.contentSize = CGSizeMake((ItemSize+ItemSpacing)*list.count+ItemSpacing, (ItemSize+ItemTitleHeight));
+            [self addSubview:lineView];
+            NSInteger index = 0;
+            for (ZJLActionItem *actionItem in list) {
+                UIButton *icon = [UIButton buttonWithType:UIButtonTypeCustom];
+                icon.frame = CGRectMake(ItemSpacing+index*(ItemSize+ItemSpacing), 0, ItemSize, ItemSize);
+                [icon setImage:[UIImage imageNamed:actionItem.iconName] forState:UIControlStateNormal];
+                [icon addTarget:self action:@selector(iconClicked:) forControlEvents:UIControlEventTouchUpInside];
+                [lineView addSubview:icon];
+                [_buttons addObject:icon];
+                
+                UILabel *iconLabel = [[UILabel alloc] initWithFrame:CGRectMake(ItemSpacing+index*(ItemSize+ItemSpacing), 0, ItemSize, ItemTitleHeight)];
+                iconLabel.font = [UIFont systemFontOfSize:13.0];
+                iconLabel.text = actionItem.title;
+                iconLabel.textAlignment = NSTextAlignmentCenter;
+                [lineView addSubview:iconLabel];
+                [_actions addObject:actionItem.actionHandler];
+                
+                index++;
+            }
+            height += ItemSize+ItemTitleHeight;
+            UIView *separator = [[UIView alloc] initWithFrame:CGRectMake(0, height, _sheetRect.size.width, 0.5)];
+            separator.backgroundColor = [UIColor lightGrayColor];
+            [self addSubview:separator];
+        }
+    }
+    UIButton *cancelButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    cancelButton.frame = CGRectMake(0, height, _sheetRect.size.width, CancelButtonHeight);
+    [cancelButton addTarget:self action:@selector(dismiss) forControlEvents:UIControlEventTouchUpInside];
+    cancelButton.titleLabel.font = [UIFont systemFontOfSize:25.0];
+    [cancelButton setTitle:NSLocalizedString(@"Cancel", @"cancel button name") forState:UIControlStateNormal];
+    [cancelButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [cancelButton setTitleColor:[UIColor redColor] forState:UIControlStateSelected];
+    cancelButton.backgroundColor = [UIColor whiteColor];
+    [self addSubview:cancelButton];
+}
+
+#pragma mark - icon clicked
+- (void)iconClicked:(UIButton *)button
+{
+    NSInteger index = [_buttons indexOfObject:button];
+    void(^handler)(void) = _actions[index];
+    handler();
+    [self dismiss];
 }
 
 #pragma mark - show
