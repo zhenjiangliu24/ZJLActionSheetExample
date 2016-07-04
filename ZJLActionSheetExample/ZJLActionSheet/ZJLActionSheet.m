@@ -19,6 +19,7 @@ static const CGFloat ItemSpacing = 20.0;
 @property (nonatomic, assign) CGRect sheetRect;
 @property (nonatomic, strong) UIWindow *window;
 @property (nonatomic, strong) UIView *backgroundView;
+@property (nonatomic, strong) UIView *dimView;
 @property (nonatomic, copy) NSArray *items;
 @property (nonatomic, strong) NSMutableArray *buttons;
 @property (nonatomic, strong) NSMutableArray *actions;
@@ -39,19 +40,30 @@ static const CGFloat ItemSpacing = 20.0;
             UIDeviceOrientationIsLandscape([UIDevice currentDevice].orientation)){
             _sheetRect = CGRectMake(0, 0, _sheetRect.size.width, _sheetRect.size.height);
         }
-        [self initBackgoundView];
+        [self initDimView];
         [self calculateHeight];
+        [self initBackgoundView];
+        [self initAllSubviews];
     }
     return self;
+}
+
+#pragma mark - dim view
+- (void)initDimView
+{
+    _dimView = [[UIView alloc] initWithFrame:_sheetRect];
+    _dimView.backgroundColor = [UIColor clearColor];
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismiss)];
+    [_dimView addGestureRecognizer:tap];
 }
 
 #pragma mark - background view
 - (void)initBackgoundView
 {
-    _backgroundView = [[UIView alloc] initWithFrame:_sheetRect];
+    self.backgroundColor = [UIColor clearColor];
+    _backgroundView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, _sheetRect.size.width, _sheetHeight)];
     [self addBlurView];
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapBackgroundView:)];
-    [_backgroundView addGestureRecognizer:tap];
+    [self addSubview:_backgroundView];
 }
 
 - (void)tapBackgroundView:(UITapGestureRecognizer *)tap
@@ -72,7 +84,7 @@ static const CGFloat ItemSpacing = 20.0;
         [_backgroundView addSubview:blurEffectView];
     }
     else {
-        _backgroundView.backgroundColor = [UIColor blackColor];
+        _backgroundView.backgroundColor = [UIColor lightGrayColor];
     }
 }
 
@@ -132,7 +144,7 @@ static const CGFloat ItemSpacing = 20.0;
                 [lineView addSubview:icon];
                 [_buttons addObject:icon];
                 
-                UILabel *iconLabel = [[UILabel alloc] initWithFrame:CGRectMake(ItemSpacing+index*(ItemSize+ItemSpacing), 0, ItemSize, ItemTitleHeight)];
+                UILabel *iconLabel = [[UILabel alloc] initWithFrame:CGRectMake(ItemSpacing+index*(ItemSize+ItemSpacing), ItemSize, ItemSize, ItemTitleHeight)];
                 iconLabel.font = [UIFont systemFontOfSize:13.0];
                 iconLabel.text = actionItem.title;
                 iconLabel.textAlignment = NSTextAlignmentCenter;
@@ -170,12 +182,46 @@ static const CGFloat ItemSpacing = 20.0;
 #pragma mark - show
 - (void)show
 {
+    self.window = [[UIWindow alloc] initWithFrame:self.sheetRect];
+    self.window.windowLevel = UIWindowLevelAlert;
+    self.window.backgroundColor = [UIColor clearColor];
+    self.window.rootViewController = [UIViewController new];
+    self.window.rootViewController.view.backgroundColor = [UIColor clearColor];
     
+    [self.window.rootViewController.view addSubview:self.dimView];
+    
+    [self.window.rootViewController.view addSubview:self];
+    
+    self.window.hidden = NO;
+    [UIView animateWithDuration:0.2 animations:^{
+        self.dimView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.2];
+        self.frame = CGRectMake(0, self.sheetRect.size.height-self.sheetHeight, self.sheetRect.size.width, self.sheetHeight);
+    } completion:^(BOOL finished) {
+        
+    }];
 }
 
 #pragma mark - dismiss
 - (void)dismiss
 {
-    
+    [UIView animateWithDuration:0.2 animations:^{
+        self.dimView.backgroundColor = [UIColor clearColor];
+        self.frame = CGRectMake(0, _sheetRect.size.height, _sheetRect.size.width, _sheetHeight);
+    } completion:^(BOOL finished) {
+        self.window = nil;
+    }];
+}
+
+@end
+
+@implementation ZJLActionItem
+- (instancetype)initWithTitle:(NSString *)title icon:(NSString *)iconName action:(void (^)(void))actionHandler
+{
+    if (self = [super init]) {
+        _title = title;
+        _iconName = iconName;
+        _actionHandler = actionHandler;
+    }
+    return self;
 }
 @end
